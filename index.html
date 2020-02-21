@@ -68,14 +68,13 @@
         const elems = respJson.messages.map(message => {
           const elem = document.createElement("div");
           const name = document.createElement("b");
-          name.textContent = message.user;
+          name.textContent = message.author;
           elem.appendChild(name);
           elem.appendChild(document.createElement("br"))
           elem.appendChild(document.createTextNode(message.content));
           return elem;
         });
         elements["messages-read"].innerHTML = "";
-        console.log(elems);
         elems.forEach(elem => elements["messages-read"].appendChild(elem));
       }
       
@@ -110,7 +109,7 @@
             "method": "POST",
             "body": JSON.stringify({
               "invite": inviteCode,
-              "username": username,
+              "name": username,
               "password": password
             })
           });
@@ -141,7 +140,7 @@
         elements["messages-send"].value = "";
         const elem = document.createElement("div");
         const name = document.createElement("b");
-        name.textContent = respJson.user;
+        name.textContent = respJson.author;
         elem.appendChild(name);
         elem.appendChild(document.createElement("br"))
         elem.appendChild(document.createTextNode(respJson.content));

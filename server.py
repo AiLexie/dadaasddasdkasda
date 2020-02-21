@@ -1,6 +1,7 @@
 import base64 as Base64
 import random as Random
 import string
+from pymongo import MongoClient
 from functools import reduce
 from datetime import datetime as DateTime
 import math as Math
@@ -12,6 +13,8 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 contents: Dict[str, bytes] = dict()
 contents["/"] = open("./index.html", "r").read().encode("utf-8")
+
+mongo_db = MongoClient("mongodb://localhost")["project-dark"]
 
 class InternalError(Exception):
   message: str
@@ -52,13 +55,13 @@ class Message:
     return {
       "content": self.content,
       "timestamp": str(self.timestamp),
-      "user": self.author
+      "author": self.author
     }
 
 class Invite:
   # `code` is the identifying property for invites.
 
-  def __init__(self, inviter: Union[User, str], code: str, accepter: Union[User, str] = None):
+  def __init__(self, inviter: Optional[Union[User, str]], code: str, accepter: Optional[Union[User, str]] = None):
     self.inviter = inviter.name if isinstance(inviter, User) else inviter
     self.accepter = accepter.name if isinstance(accepter, User) else accepter
     self.code = code
@@ -69,31 +72,50 @@ class Invite:
       "accepter": self.accepter
     }
 
-user_set = set()
-message_set = set()
-invite_set = set()
-
-def get_user(name: str) -> Optional[User]:
-  return next((user for user in user_set if user.name == name), None)
+def get_user(name: str):
+  raw_user = mongo_db.users.find_one({"name": name})
+  if raw_user is None:
+    return None
+  return User(raw_user.get("name"), raw_user.get("password"), raw_user.get("about"))
 
 def store_user(new_user: User):
   old_user = get_user(new_user.name)
+  raw_user = {
+    "name": new_user.name,
+    "password": new_user.password,
+    "about": new_user.about
+  }
   if old_user is not None:
-    user_set.remove(old_user)
-  user_set.add(new_user)
+    mongo_db.users.find_and_modify(query={"name": new_user.name}, update=raw_user)
+  else:
+    mongo_db.users.insert_one(raw_user)
+
+def get_message(timestamp: float):
+  raw_message = mongo_db.messages.find_one({"timestamp": timestamp})
+  if raw_message is None:
+    return None
+  return Message(raw_message.get("timestamp"), raw_message.get("author"), raw_message.get("content"))
 
 def get_latest_messages(count: int, before: float = Math.inf) -> List[Message]:
-  unsorted_messages: list[Message] = list(message_set)
-  messages = sorted(unsorted_messages, key=lambda message : message.timestamp)
-  raw_before_ind = next((ind for ind, message in enumerate(reversed(messages)) if before > message.timestamp), None)
-  before_ind = raw_before_ind if raw_before_ind is not None else len(messages)
-  return messages[len(messages) - count:len(messages) - before_ind]
+  raw_messages = mongo_db.messages.aggregate([
+    {"$match": {"timestamp": {"$lt": before}}},
+    {"$sort": {"timestamp": 1}},
+    {"$limit": count},
+    {"$sort": {"timestamp": -1}}
+  ])
+  return list(map(lambda item : Message(item.get("timestamp"), item.get("author"), item.get("content")), raw_messages))
 
 def store_message(new_message: Message):
-  old_message = next((message for message in message_set if message.timestamp == new_message.timestamp), None)
+  old_message = get_message(new_message.timestamp)
+  raw_message = {
+    "timestamp": new_message.timestamp,
+    "content": new_message.content,
+    "author": new_message.author
+  }
   if old_message is not None:
-    message_set.remove(old_message)
-  message_set.add(new_message)
+    mongo_db.messages.find_and_modify(query={"timestamp": new_message.timestamp}, update=raw_message)
+  else:
+    mongo_db.messages.insert_one(raw_message)
 
 def messages_get_authors(messages: List[Message]) -> List[str]:
   def reducer(author_list: List[str], message: Message) -> List[str]:
@@ -102,27 +124,27 @@ def messages_get_authors(messages: List[Message]) -> List[str]:
     return author_list
   return reduce(reducer, messages, [])
 
-def get_invites_from_user(username: str) -> List[Invite]:
-  return [invite for invite in invite_set if invite.inviter == username]
-
 def get_invite(code: str):
-  return next((invite for invite in invite_set if invite.code == code), None)
+  raw_invite = mongo_db.invites.find_one({"code": code, "accepter": None})
+  if raw_invite is None:
+    return None
+  return Invite(raw_invite.get("inviter"), raw_invite.get("code"), raw_invite.get("accepter"))
+
+def get_invites_from_user(name: str) -> List[Invite]:
+  raw_invites = mongo_db.invites.find({"inviter": name})
+  return list(map(lambda invite : Invite(invite.inviter, invite.code, invite.accepter), raw_invites))
 
 def store_invite(new_invite: Invite):
   old_invite = get_invite(new_invite.code)
+  raw_invite = {
+    "inviter": new_invite.inviter,
+    "accepter": new_invite.accepter,
+    "code": new_invite.code
+  }
   if old_invite is not None:
-    invite_set.remove(old_invite)
-  invite_set.add(new_invite)
-
-john = User("john", "12345")
-bob = User("bob", "67890")
-store_user(john)
-store_user(bob)
-store_message(Message(0, john, "Hi, I'm John!"))
-store_message(Message(1, bob, "Hello World"))
-store_message(Message(2, john, "Test test test"))
-store_message(Message(3, john, "Can you see this?"))
-store_invite(Invite(john, "pee"))
+    mongo_db.invites.find_and_modify(query={"code": new_invite.code, "accepter": None}, update=raw_invite)
+  else:
+    mongo_db.invites.insert_one(raw_invite)
 
 class RequestHandler(BaseHTTPRequestHandler):
   DIRECTORIES: Dict[str, Callable[[BaseHTTPRequestHandler], None]]
@@ -211,7 +233,7 @@ def request_me(http_request: RequestHandler):
       body = http_request.rfile.read(length)
       data = Json.loads(body)
       invite_code = data.get("invite")
-      username = data.get("username")
+      username = data.get("name")
       password = data.get("password")
       invite = get_invite(invite_code)
       if invite is None or invite.accepter is not None:
@@ -230,6 +252,7 @@ def request_me(http_request: RequestHandler):
       http_request.send_header("Content-Type", "application/json")
       http_request.end_headers()
       http_request.wfile.write(f'{{"message":"{message}"}}'.encode("utf-8"))
+      raise
     else:
       http_request.send_response(200)
       http_request.send_header("Content-Type", "application/json")
@@ -295,7 +318,7 @@ def request_invite(http_request: RequestHandler):
       http_request.wfile.write(Json.dumps(invites, cls=DunderJSONEncoder, separators=(',', ':')).encode("utf-8"))
     else:
       invite = get_invite(invite_code)
-      if invite is None or invite.author is not None:
+      if invite is None or invite.inviter is not None:
         http_request.send_response(404)
         http_request.send_header("Content-Type", "application/json")
         http_request.end_headers()
