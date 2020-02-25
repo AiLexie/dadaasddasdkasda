@@ -353,7 +353,7 @@ def request_not_found(http_request: BaseHTTPRequestHandler):
 RequestHandler.DIRECTORIES = {"users": request_user, "messages": request_message, "invites": request_invite, "me": request_me}
 RequestHandler.FALLBACK = request_not_found
 
-server = HTTPServer(("", 8080), RequestHandler)
+server = HTTPServer(("", 80), RequestHandler)
 
 try:
   server.serve_forever()
