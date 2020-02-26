@@ -1,3 +1,4 @@
+import os
 import base64 as Base64
 import random as Random
 import string
