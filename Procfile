@@ -1,1 +1,2 @@
-web: python src/server.py
+release: make
+web: python out/server.py
