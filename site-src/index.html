@@ -6,8 +6,23 @@
     <title>Document</title>
 
     <style>
+      body {
+        overflow: hidden;
+      }
+
       .section {
         display: none;
+      }
+
+      #messages {
+        overflow: hidden;
+        display: grid;
+        grid-template-rows: auto auto auto;
+        height: calc(100vh - 16px);
+      }
+
+      #messages-read {
+        overflow-y: scroll;
       }
     </style>
   </head>
@@ -30,11 +45,13 @@
       <div id="messages-read">
 
       </div>
-      <br>
-      <input id="messages-send" type="text">
-      <input id="messages-send-button" type="button" value="Send"><br>
-      <input id="messages-go-invites" type="button" value="Invites Disabled Until Further Notice" disabled>
-      <input id="messages-go-signout" type="button" value="Sign Out">
+      <div>
+        <br>
+        <input id="messages-send" type="text">
+        <input id="messages-send-button" type="button" value="Send"><br>
+        <input id="messages-go-invites" type="button" value="Invites Disabled Until Further Notice" disabled>
+        <input id="messages-go-signout" type="button" value="Sign Out">
+      </div>
     </div>
 
 
@@ -46,7 +63,7 @@
       function authSuccess(username, password) {
         if (username != undefined) localStorage.setItem("token", btoa(`${username}:${password}`));
         elements["login"].style.display = null;
-        elements["messages"].style.display = "block";
+        elements["messages"].style.display = "grid";
         messagesIntervalFunc();
         messagesInterval = setInterval(messagesIntervalFunc, 5000);
       }
@@ -74,8 +91,10 @@
           elem.appendChild(document.createTextNode(message.content));
           return elem;
         });
+        if (elements["messages-read"].scrollHeight - elements["messages-read"].offsetHeight == elements["messages-read"].scrollTop)
+          requestAnimationFrame(() => elements["messages-read"].scroll(0, 10000000000));
         elements["messages-read"].innerHTML = "";
-        elems.forEach(elem => elements["messages-read"].appendChild(elem));
+        elems.reverse().forEach(elem => elements["messages-read"].appendChild(elem));
       }
       
       if (!localStorage.getItem("token")) {
@@ -145,6 +164,7 @@
         elem.appendChild(document.createElement("br"))
         elem.appendChild(document.createTextNode(respJson.content));
         elements["messages-read"].appendChild(elem);
+        requestAnimationFrame(() => elements["messages-read"].scroll(0, 10000000000));
       });
 
       elements["messages-send"].addEventListener("keyup", event => {

@@ -1,2 +1,5 @@
 # Ignore generated files.
 __pycache__/
+
+# Ignore development files.
+debugrun.sh
