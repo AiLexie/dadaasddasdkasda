@@ -100,9 +100,8 @@ def get_message(timestamp: float):
 def get_latest_messages(count: int, before: float = Math.inf) -> List[Message]:
   raw_messages = mongo_db.messages.aggregate([
     {"$match": {"timestamp": {"$lt": before}}},
-    {"$sort": {"timestamp": 1}},
-    {"$limit": count},
-    {"$sort": {"timestamp": -1}}
+    {"$sort": {"timestamp": -1}},
+    {"$limit": count}
   ])
   return list(map(lambda item : Message(item.get("timestamp"), item.get("author"), item.get("content")), raw_messages))
 
