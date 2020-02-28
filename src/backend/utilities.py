@@ -1,10 +1,18 @@
-from typing import Callable, List, Optional, Tuple, TypeVar, Union, overload
 from clastic import Response
 from werkzeug.test import create_environ
+from json import JSONEncoder, dumps, loads
 from functools import reduce
 from mimetypes import guess_type as get_type
+from typing import Callable, List, Optional, Tuple, TypeVar, Union, overload
 
 _T = TypeVar("_T")
+
+class DunderJSONEncoder(JSONEncoder):
+  def default(self, obj):
+    try:
+      return obj.__to_json__()
+    except AttributeError:
+      return obj
 
 @overload
 def try_except(success: Callable[..., _T]) -> Optional[_T]: ...
@@ -78,3 +86,12 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
       })
 
   return [(path, route) for path in paths]
+
+def dump_json(obj, indent: Union[None, int, str] = "\t"):
+  if indent is None:
+    return dumps(obj, cls=DunderJSONEncoder, separators=(',', ':'))
+  else:
+    return dumps(obj, cls=DunderJSONEncoder, indent=indent)
+
+def load_json(json: str):
+  return loads(json)
