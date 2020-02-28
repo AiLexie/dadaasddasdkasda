@@ -13,7 +13,7 @@ from typing import Callable, Optional, Dict, List, Union
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 contents: Dict[str, bytes] = dict()
-contents["/"] = open(os.path.join(os.path.dirname(__file__), "assets/index.html"), "r").read().encode("utf-8")
+contents["/"] = open(os.path.join(os.path.dirname(__file__), "assets/mainpage.html"), "r").read().encode("utf-8")
 
 mongo_db = MongoClient(os.getenv("MONGO_DB_CONNECT"))["project-dark"]
 

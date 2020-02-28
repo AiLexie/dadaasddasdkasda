@@ -2,10 +2,15 @@
   "name": "project-dark",
   "version": "1.0.0",
   "description": "",
-  "dependencies": {},
+  "dependencies": {
+    "react": "^16.13.0",
+    "react-dom": "^16.13.0"
+  },
   "devDependencies": {
     "@babel/cli": "^7.8.4",
     "@babel/core": "^7.8.6",
+    "@types/react": "^16.9.23",
+    "@types/react-dom": "^16.9.5",
     "babel-preset-minify": "^0.5.1",
     "typescript": "^3.8.2"
   }
