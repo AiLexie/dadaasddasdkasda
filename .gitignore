@@ -1,5 +1,6 @@
 # Ignore generated files.
 __pycache__/
+node_modules/
 out/
 
 # Ignore development files.
