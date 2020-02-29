@@ -2,6 +2,7 @@
   "compilerOptions": {
     "lib": ["DOM", "ESNext"],
     "target": "ES5",
+    "module": "ESNext",
     "jsx": "react",
     "experimentalDecorators": true,
     "sourceMap": true,

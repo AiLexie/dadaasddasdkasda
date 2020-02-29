@@ -3,12 +3,12 @@ out/: src/backend/*.py out/assets/
 	-cp src/backend/*.py out/
 	cp src/frontendmap.json out/
 
-out/assets/: src/* $(wildcard out/assets/*.js)
+out/assets/: src/* out/assets/*.js
 	mkdir -p out/assets/
 	-cp src/html/*.html out/assets/
 	-cp src/css/*.css out/assets/
 
-out/assets/%.js: $(wildcard src/code/*)
+out/assets/*.js: src/code/*
 	mkdir -p out/assets/
 	-tsc
 	find out/assets/ -mindepth 2 -type f -exec mv -u "{}" out/assets/ ";"
