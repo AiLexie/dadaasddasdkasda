@@ -1,6 +1,7 @@
 out/: src/backend/*.py out/assets/
 	mkdir -p out/
-	cp src/backend/*.py out/
+	-cp src/backend/*.py out/
+	cp src/frontendmap.json out/
 
 out/assets/: src/* $(wildcard out/assets/*.js)
 	mkdir -p out/assets/
