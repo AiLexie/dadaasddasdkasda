@@ -2,12 +2,12 @@ out/: src/backend/*.py out/assets/
 	mkdir -p out/
 	cp src/backend/*.py out/
 
-out/assets/: src/* out/assets/*.js
+out/assets/: src/* $(wildcard out/assets/*.js)
 	mkdir -p out/assets/
 	-cp src/html/*.html out/assets/
 	-cp src/css/*.css out/assets/
 
-out/assets/%.js: src/code/*
+out/assets/%.js: $(wildcard src/code/*)
 	mkdir -p out/assets/
 	-cp src/code/*.{js,ts,tsx} out/assets/
 	-tsc out/assets/*.{ts,tsx} --experimentalDecorators --sourceMap --jsx "react"
