@@ -1,16 +1,43 @@
-from typing import Callable, List, Optional, Tuple, TypeVar, Union, overload
 from clastic import Response
 from werkzeug.test import create_environ
+from json import JSONEncoder, dumps, loads
 from functools import reduce
 from mimetypes import guess_type as get_type
+from typing import Callable, Generic, List, Optional, Tuple, TypeVar, Union, \
+  overload
 
-_T = TypeVar("_T")
+T = TypeVar("T")
+
+class DunderJSONEncoder(JSONEncoder):
+  def default(self, obj):
+    try:
+      return obj.__to_json__()
+    except AttributeError:
+      return obj
+
+class ptr(Generic[T]):
+  def __init__(self, value: T):
+    self._value = value
+
+  @property
+  def value(self):
+    return self._value
+
+  @value.setter
+  def value(self, value: T):
+    self._value = value
+
+  def __repr__(self) -> str:
+    return f"<pointer to {self.value}>"
+
+  def __str__(self) -> str:
+    return str(self.value)
 
 @overload
-def try_except(success: Callable[..., _T]) -> Optional[_T]: ...
-def try_except(success: Callable[..., _T],
-    failiure: Union[Callable[[BaseException], None], _T] = None,
-    *exceptions: List[BaseException]) -> _T:
+def try_except(success: Callable[..., T]) -> Optional[T]: ...
+def try_except(success: Callable[..., T],
+    failiure: Union[Callable[[BaseException], None], T] = None,
+    *exceptions: List[BaseException]) -> T:
   try:
     return success()
   except exceptions or Exception as ex:
@@ -78,3 +105,12 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
       })
 
   return [(path, route) for path in paths]
+
+def dump_json(obj, indent: Union[None, int, str] = "\t"):
+  if indent is None:
+    return dumps(obj, cls=DunderJSONEncoder, separators=(',', ':'))
+  else:
+    return dumps(obj, cls=DunderJSONEncoder, indent=indent)
+
+def load_json(json: str):
+  return loads(json)
