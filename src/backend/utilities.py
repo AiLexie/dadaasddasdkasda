@@ -89,19 +89,18 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
     raise TypeError("Expected content xor file to be present but neither were.")
   elif content is not None and file is not None:
     raise TypeError("Expected content xor file to be present but both were.")
-  the_content: Optional[Union[str, bytes]] = open(file, "r").read() \
+  the_content: Optional[Union[str, bytes]] = open(file, "rb").read() \
     if file is not None else content
   the_mime = mime if mime is not None else get_type(file) \
     if file is not None else None
-  assert the_content is not None
 
   @generate_methods(methods=["HEAD", "GET", "OPTIONS"])
   def route(request):
-    content_length = the_content if type(the_content) == str \
-      else the_content.decode("utf-8") # type: ignore
+    assert the_content is not None
+    content_length = len(the_content)
     return Response(the_content, 200, {
         "Content-Type": the_mime[0],
-        "Content-Length": str(len(content_length)) # type: ignore
+        "Content-Length": str(content_length)
       })
 
   return [(path, route) for path in paths]

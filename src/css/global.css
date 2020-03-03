@@ -1,0 +1,82 @@
+body {
+  margin: 0;
+  font-family: "Roboto", sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+}
+
+a {
+  cursor: pointer;
+}
+
+.popup {
+  position: fixed;
+}
+
+.popup.popup-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.popup.popup-top-left {
+  top: 50px;
+  left: 50px;
+}
+
+.prompt {
+  border-radius: 2px;
+  padding: 10px;
+  background-color: #454545;
+  color: #00a5ff;
+}
+
+.prompt > h1 {
+  text-align: center;
+}
+
+.text-box {
+  display: grid;
+  grid-template-columns: min-content auto;
+  margin-bottom: 8px;
+  border-bottom: 1px #00a5ff solid;
+  font-size: 1.25em;
+  width: 100%;
+}
+
+.text-box > input {
+  border: 0;
+  outline: 0;
+  color: #ffffff;
+  background-color: #00000000;
+  transition: border-color 200ms;
+  font-size: unset;
+}
+
+.text-box > label {
+  display: table;
+  font-size: 0.7em;
+  top: 0;
+  left: 0;
+  height: 100%;
+  margin-right: 2px;
+  font-size: 1.5em;
+}
+
+.text-box > label > div {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+#mount {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+
+  background-image: url("/assets/loginbg.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: cover;
+}

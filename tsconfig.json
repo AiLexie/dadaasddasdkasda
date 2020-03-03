@@ -8,17 +8,18 @@
     "sourceMap": true,
 
     "baseUrl": ".",
-    "outDir": "out/assets/",
+    "outDir": "./out/assets/",
     "paths": {
       "/assets/*": [
-        "src/code/*",
-        "src/code/fetchers/*"
+        "./src/code/*",
+        "./src/code/fetchers/*",
+        "./src/code/libs/*"
       ]
     }
   },
   "include": [
-    "src/code/**/*.js",
-    "src/code/**/*.ts",
-    "src/code/**/*.tsx"
+    "./src/code/**/*.js",
+    "./src/code/**/*.ts",
+    "./src/code/**/*.tsx"
   ]
 }
