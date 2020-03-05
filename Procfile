@@ -1,2 +1,2 @@
 release: make
-web: python out/server.py
+web: chmod +x out/server-start ; ./out/server-start

@@ -1,7 +1,13 @@
-out/: src/backend/*.py out/assets/
+out/: $(wildcard src/backend/*.py) out/assets/ out/python/
 	mkdir -p out/
-	-cp src/backend/*.py out/
+	cargo build $(if $(filter true,$(PRODUCTION)),--release)
+	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/server-start out/
 	cp src/frontendmap.json out/
+
+out/python/: $(wildcard src/backend/*.py)
+	mkdir -p out/python/
+	-cp src/backend/*.py out/python/
+	$(if $(filter true,$(PRODUCTION)),python -m compileall out/*.py)
 
 out/assets/: src/* $(wildcard out/assets/*.js)
 	mkdir -p out/assets/
@@ -14,7 +20,15 @@ out/assets/%.js: $(wildcard src/code/*)
 	-tsc out/assets/*.{ts,tsx} --experimentalDecorators --sourceMap --jsx "react"
 	-babel out/assets/*.js --presets minify --source-maps -d out/assets/
 
+PRODUCTION = true
+
 build: out/
+
+debug: PRODUCTION = false
+debug: out/
 
 clean:
 	rm -rf out
+
+clean_hard: clean
+	cargo clean
