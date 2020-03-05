@@ -9,6 +9,11 @@ pyo3 = "0.9.0-alpha.1"
 hyper = "0.13"
 tokio = { version = "0.2", features = ["full"] }
 
+[lib]
+name = "hyper_py"
+path = "src/backend/lib.rs"
+crate-type = ["dylib"]
+
 [[bin]]
-name = "server-start"
+name = "server_start"
 path = "src/backend/main.rs"

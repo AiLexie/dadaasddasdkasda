@@ -1,12 +1,13 @@
-out/: $(wildcard src/backend/*.py) out/assets/ out/python/
+out/: $(wildcard src/backend/*.py) out/assets/ out/server_impl/
 	mkdir -p out/
 	cargo build $(if $(filter true,$(PRODUCTION)),--release)
-	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/server-start out/
+	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/server_start out/
+	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/libhyper_py.so out/hyper_py.so
 	cp src/frontendmap.json out/
 
-out/python/: $(wildcard src/backend/*.py)
-	mkdir -p out/python/
-	-cp src/backend/*.py out/python/
+out/server_impl/: $(wildcard src/backend/*.py)
+	mkdir -p out/server_impl/
+	-cp src/backend/*.py out/server_impl/
 	$(if $(filter true,$(PRODUCTION)),python -m compileall out/*.py)
 
 out/assets/: src/* $(wildcard out/assets/*.js)
