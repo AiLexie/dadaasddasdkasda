@@ -8,6 +8,11 @@ from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar, \
 T = TypeVar("T")
 
 class DunderJSONEncoder(JSONEncoder):
+  """A JSON Encoder that treats objects with a __to_json__ method specially,
+  and instead encodes the representation of the object using lists and
+  dictionaries returned by the _to_json__ method.
+  """
+
   def default(self, obj):
     try:
       return obj.__to_json__()
@@ -15,6 +20,11 @@ class DunderJSONEncoder(JSONEncoder):
       return obj
 
 class ptr(Generic[T]):
+  """A generic class that holds an object, and can be used as a pointer due to
+  decorated names. The value of the pointer can easily be set and gotten with
+  `self.value`. Represented as `<pointer to (representation of value)>`.
+  """
+
   def __init__(self, value: T):
     self._value = value
 
@@ -33,6 +43,10 @@ class ptr(Generic[T]):
     return str(self.value)
 
 class HTTPHeadJob(HTTPJob):
+  """Internal class used for desguising a HEAD request as a GET request. Used by
+  the `generate_methods` function.
+  """
+
   def __init__(self, old_job: HTTPJob):
     self.method = "GET"
     self.uri = old_job.uri
