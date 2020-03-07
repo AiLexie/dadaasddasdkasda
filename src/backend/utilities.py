@@ -1,10 +1,9 @@
-from clastic import Response
-from werkzeug.test import create_environ
+from . import HTTPJob
 from json import JSONEncoder, dumps, loads
 from functools import reduce
 from mimetypes import guess_type as get_type
-from typing import Callable, Generic, List, Optional, Tuple, TypeVar, Union, \
-  overload
+from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar, \
+  Union, overload
 
 T = TypeVar("T")
 
@@ -32,6 +31,23 @@ class ptr(Generic[T]):
 
   def __str__(self) -> str:
     return str(self.value)
+
+class HTTPHeadJob(HTTPJob):
+  def __init__(self, old_job: HTTPJob):
+    self.method = "GET"
+    self.uri = old_job.uri
+    self.headers = old_job.headers
+    self._old_job = old_job
+
+  def write_head(self, status: Union[int, str], headers: Dict[str, str] = {}):
+    self._old_job.write_head(status, headers)
+    self._old_job.close_body()
+
+  def write_body(self):
+    pass
+
+  def close_body(self):
+    pass
 
 @overload
 def try_except(success: Callable[..., T]) -> Optional[T]: ...
@@ -66,20 +82,23 @@ def generate_methods(**opts: List[str]):
     }.items() if val is not None
   }
 
-  def decorator(route):
-    def new_route(request):
-      if request.method not in methods and len(methods) > 0:
-        return Response(status=405,
-          headers={"Allow": to_comma_sep_str(methods)})
-      elif request.method == "HEAD":
-        new_request = create_environ(method="GET",
-          query_string=request.query_string, headers=dict(request.headers))
-        response = route(new_request)
-        return Response(status=response.status, headers=response.headers)
-      elif request.method == "OPTIONS":
-        return Response(status=204, headers=headers)
+  def decorator(handler: Callable[..., None]):
+    def new_route(job: HTTPJob, *args, **kwargs):
+      if job.method not in methods and len(methods) > 0:
+        allowed = to_comma_sep_str(methods)
+        if allowed is None:
+           job.write_head("500 Internal Server Error")
+        else:
+          job.write_head("405 Method Not Allowed", {"Allow": allowed})
+        job.close_body()
+      elif job.method == "HEAD":
+        new_job = HTTPHeadJob(job)
+        handler(new_job, *args, **kwargs)
+      elif job.method == "OPTIONS":
+        job.write_head("204 No Content", headers)
+        job.close_body()
       else:
-        return route(request)
+        return handler(job, *args, **kwargs)
     return new_route
   return decorator
 
@@ -96,15 +115,16 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
   assert the_content is not None
 
   @generate_methods(methods=["HEAD", "GET", "OPTIONS"])
-  def route(request):
-    content_length = the_content if type(the_content) == str \
-      else the_content.decode("utf-8") # type: ignore
-    return Response(the_content, 200, {
+  def route(job: HTTPJob):
+    content_length = the_content if isinstance(the_content, str) \
+      else the_content.decode("utf-8")
+    job.write_head("200 OK", {
         "Content-Type": the_mime[0],
-        "Content-Length": str(len(content_length)) # type: ignore
+        "Content-Length": str(len(content_length))
       })
+    job.close_body(the_content)
 
-  return [(path, route) for path in paths]
+  return {path: route for path in paths}
 
 def dump_json(obj, indent: Union[None, int, str] = "\t"):
   if indent is None:
