@@ -1,4 +1,4 @@
-out/: $(wildcard src/backend/*.py) out/assets/ out/server_impl/
+out/: $(wildcard src/backend/*) out/assets/ out/server_impl/
 	mkdir -p out/
 	cargo build $(if $(filter true,$(PRODUCTION)),--release)
 	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/server_start out/
