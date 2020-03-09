@@ -2,8 +2,8 @@ from . import HTTPJob
 from json import JSONEncoder, dumps, loads, JSONDecodeError
 from functools import reduce
 from mimetypes import guess_type as get_type
-from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar, \
-	Union, overload
+from typing import Any, Callable, Dict, Generic, Iterable, List, Optional, Tuple, \
+	TypeVar, Union, overload
 
 T = TypeVar("T")
 
@@ -44,6 +44,26 @@ class ptr(Generic[T]):
 	def __str__(self) -> str:
 		return str(self.value)
 
+class Endpoint:
+	@staticmethod
+	def into(expression: Union[str, List[Optional[str]]]):
+		return lambda handler: Endpoint(expression, handler)
+
+	def __init__(self, expression: Union[str, List[Optional[str]]],
+			handler: Callable[..., None]):
+		self._handler = handler
+		self.expression = [
+			(part if part != "" else None) for part in \
+				(expression.split("/")[1:] if type(expression) is str else expression)
+		]
+
+	def __call__(self, job: HTTPJob):
+		parameters = [
+			job.path[ind] for ind, item in enumerate(self.expression) \
+				if item is None
+		]
+		self._handler(job, *parameters)
+
 class HTTPHeadJob(HTTPJob):
 	"""Internal class used for desguising a HEAD request as a GET request. Used by
 	the `generate_methods` function.
@@ -75,48 +95,41 @@ def try_except(success: Callable[..., T],
 	except exceptions or Exception as ex:
 		return failiure(ex) if callable(failiure) else failiure
 
-def generate_methods(**opts: List[str]):
-	"""Modifies a route function to automatically handle HEAD and OPTIONS method
-	requests. If the methods keyword argument is set, any method not in the list
-	will also automatically be responded with status code 405 from this
-	decorator.
-	"""
+def join(lst: Iterable[Any], glue: str = ", "):
+	return try_except(lambda: reduce(lambda a, b: f"{a}{glue}{b}", lst), "")
 
-	def to_comma_sep_str(lst: List[str]):
-		return try_except(lambda: reduce(lambda a, b: f"{a}, {b}", lst))
-	methods = opts.get("methods", list())
-	cors_methods = to_comma_sep_str(opts.get("cors_methods", list()))
-	cors_origins = to_comma_sep_str(opts.get("cors_origins", list()))
-	cors_headers = to_comma_sep_str(opts.get("cors-headers", list()))
+def generate_endpoint(expression: Union[str, List[Optional[str]]],
+		methods: Dict[str, Optional[Callable[..., None]]],
+		cors_methods: List[str] = [], cors_origins: List[str] = [],
+		cors_headers: List[str] = []):
+	headers_405 = {name: val for name, val in {
+		"Accept": join(list(methods.keys()))
+	}.items() if val != ""}
+	headers_options = {name: val for name, val in dict({
+		"Access-Control-Allow-Origin": join(cors_origins),
+		"Access-Control-Allow-Methods": join(cors_methods),
+		"Access-Control-Allow-Headers": join(cors_headers)
+	}, **headers_405).items() if val != ""}
 
-	headers = {
-		name: val for name, val in {
-			"Allow": to_comma_sep_str(methods),
-			"Access-Control-Allow-Origin": cors_origins,
-			"Access-Control-Allow-Methods": cors_methods,
-			"Access-Control-Allow-Headers": cors_headers
-		}.items() if val is not None
-	}
+	def perform_head(job: HTTPJob, *args, **kwargs):
+		new_job = HTTPHeadJob(job)
+		methods.get("GET")(new_job)
 
-	def decorator(handler: Callable[..., None]):
-		def new_route(job: HTTPJob, *args, **kwargs):
-			if job.method not in methods and len(methods) > 0:
-				allowed = to_comma_sep_str(methods)
-				if allowed is None:
-					 job.write_head("500 Internal Server Error")
-				else:
-					job.write_head("405 Method Not Allowed", {"Allow": allowed})
-				job.close_body()
-			elif job.method == "HEAD":
-				new_job = HTTPHeadJob(job)
-				handler(new_job, *args, **kwargs)
-			elif job.method == "OPTIONS":
-				job.write_head("204 No Content", headers)
-				job.close_body()
-			else:
-				return handler(job, *args, **kwargs)
-		return new_route
-	return decorator
+	def preform_options(job: HTTPJob, *args, **kwargs):
+		job.close_head("204 No Content", headers_options)
+
+	compiled_methods = dict({
+		"HEAD": perform_head,
+		"OPTIONS": preform_options
+	}, **methods)
+
+	def on_request(job: HTTPJob, *args, **kwargs):
+		method = compiled_methods.get(job.method)
+		if method is None:
+			job.close_head(405, headers_405)
+		else:
+			method(job, *args, **kwargs)
+	return Endpoint(expression, on_request)
 
 def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
 		file: Optional[str] = None, mime: Optional[Tuple[str, str]] = None):
@@ -130,7 +143,6 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
 		if file is not None else None
 	assert the_content is not None
 
-	@generate_methods(methods=["HEAD", "GET", "OPTIONS"])
 	def route(job: HTTPJob):
 		content_length = the_content if isinstance(the_content, str) \
 			else the_content.decode("utf-8")
@@ -140,7 +152,10 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
 			})
 		job.close_body(the_content)
 
-	return {path: route for path in paths}
+	return [
+		generate_endpoint("" if path == "/" else path, methods = {"GET": route}) \
+			for path in paths
+	]
 
 def dump_json(obj, indent: Union[None, int, str] = "\t"):
 	if indent is None:

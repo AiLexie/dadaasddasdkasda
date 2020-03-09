@@ -41,7 +41,8 @@ class HTTPJob:
 		}
 
 		url = urlparse(path)
-		self.path = [unquote(path) for path in url.path.split("/")][1:]
+		self.path = [] if url.path == "/" else \
+			[unquote(path) for path in url.path.split("/")][1:]
 		self.query = parse_qsl(url.query)
 
 	def write_head(self, status: Union[int, str], headers: Dict[str, str] = {}):
@@ -56,6 +57,13 @@ class HTTPJob:
 		header_arr = [(key, val) for key, val in headers.items()]
 
 		self._wr_head_fn(status_data, header_arr)
+
+	def close_head(self, status: Union[int, str], headers: Dict[str, str] = {}):
+		"""Writes the head of the response, then ends the request with no content.
+		"""
+
+		self.write_head(status, headers)
+		self.close_body()
 
 	def write_body(self, body: Union[str, bytes, List[Union[str, bytes]]]):
 		"""Writes part of the body. The body may be a `str`, `bytes`, or a list of
@@ -88,15 +96,7 @@ class HTTPJob:
 		self.write_head("204 No Content", {})
 		self.close_body()
 
-from .endpoints import endpoints
-
-def handler(job: HTTPJob):
-	endpoint = endpoints.get(job.uri, endpoints.get(None, None))
-	if endpoint is not None:
-		endpoint(job)
-	else:
-		job.write_head("501 Not Implemented", {})
-		job.close_body()
+from .endpoints import handler
 
 def direct_request_handler(request: Environ, respond: StartResponse):
 	body = Queue()
