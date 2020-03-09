@@ -1,7 +1,7 @@
 from gevent import monkey; monkey.patch_all()
 from gevent import spawn
 from gevent.queue import Queue
-from gevent.pywsgi import WSGIServer, WSGIHandler
+from gevent.pywsgi import WSGIServer, WSGIHandler, Input
 from typing import Any, Callable, Dict, List, Tuple, Union, Optional
 from urllib.parse import parse_qsl, unquote, urlparse
 from time import sleep
@@ -29,10 +29,13 @@ class HTTPJob:
 
 		method = request.get("REQUEST_METHOD")
 		path = request.get("REQUEST_URI")
+		body = request.get("wsgi.input")
 		assert method is not None
 		assert path is not None
+		assert body is not None
 		self.method: str = method
 		self.uri: str = path
+		self.body: Input = body
 		self.headers = {
 			key[5:]: val for key, val in request.items() if key.startswith("HTTP_")
 		}

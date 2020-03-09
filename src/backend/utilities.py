@@ -1,11 +1,13 @@
 from . import HTTPJob
-from json import JSONEncoder, dumps, loads
+from json import JSONEncoder, dumps, loads, JSONDecodeError
 from functools import reduce
 from mimetypes import guess_type as get_type
 from typing import Callable, Dict, Generic, List, Optional, Tuple, TypeVar, \
 	Union, overload
 
 T = TypeVar("T")
+
+JSONDecodeError = JSONDecodeError
 
 class DunderJSONEncoder(JSONEncoder):
 	"""A JSON Encoder that treats objects with a __to_json__ method specially,
