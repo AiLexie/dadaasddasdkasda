@@ -137,18 +137,17 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
 		raise TypeError("Expected content xor file to be present but neither were.")
 	elif content is not None and file is not None:
 		raise TypeError("Expected content xor file to be present but both were.")
-	the_content: Optional[Union[str, bytes]] = open(file, "r").read() \
+	the_content: Optional[Union[str, bytes]] = open(file, "rb").read() \
 		if file is not None else content
 	the_mime = mime if mime is not None else get_type(file) \
 		if file is not None else None
-	assert the_content is not None
 
 	def route(job: HTTPJob):
-		content_length = the_content if isinstance(the_content, str) \
-			else the_content.decode("utf-8")
+		assert the_content is not None
+		content_length = len(the_content)
 		job.write_head(200, {
 				"Content-Type": the_mime[0],
-				"Content-Length": str(len(content_length))
+				"Content-Length": str(content_length)
 			})
 		job.close_body(the_content)
 
