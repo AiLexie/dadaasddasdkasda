@@ -1,14 +1,14 @@
 {
-  "/": "login.html",
-  "/assets/tools.js": "tools.js",
-  "/assets/login.js": "login.js",
-  "/assets/login.js.map": "login.js.map",
-  "/assets/components.js": "components.js",
-  "/assets/components.js.map": "components.js.map",
-  "/assets/react-fetcher.js": "react-fetcher.js",
-  "/assets/react-fetcher.js.map": "react-fetcher.js.map",
-  "/assets/react-dom-fetcher.js": "react-dom-fetcher.js",
-  "/assets/react-dom-fetcher.js.map": "react-dom-fetcher.js.map",
-  "/assets/loginbg.png": "2020-01-30_19.11.28.png",
-  "/assets/global.css": "global.css"
+	"/": "login.html",
+	"/assets/tools.js": "tools.js",
+	"/assets/login.js": "login.js",
+	"/assets/login.js.map": "login.js.map",
+	"/assets/components.js": "components.js",
+	"/assets/components.js.map": "components.js.map",
+	"/assets/react-fetcher.js": "react-fetcher.js",
+	"/assets/react-fetcher.js.map": "react-fetcher.js.map",
+	"/assets/react-dom-fetcher.js": "react-dom-fetcher.js",
+	"/assets/react-dom-fetcher.js.map": "react-dom-fetcher.js.map",
+	"/assets/loginbg.png": "2020-01-30_19.11.28.png",
+	"/assets/global.css": "global.css"
 }
