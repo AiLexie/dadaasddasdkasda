@@ -16,8 +16,7 @@
 
       #messages {
         overflow: hidden;
-        display: grid;
-        grid-template-rows: auto auto auto;
+        grid-template-rows: min-content auto min-content;
         height: calc(100vh - 16px);
       }
 
@@ -101,13 +100,13 @@
         authFail();
       } else {
         authSuccess();
-        /*fetch("/api/v1/me", {
+        fetch("/api/v1/me", {
           "headers": {"Authorization": `Basic ${localStorage.getItem("token")}`}
         }).then(async resp => {
           const respJson = await resp.json();
           if (!resp.ok) return authFail(respJson.message);
           authSuccess();
-        });*/
+        });
       }
 
       elements["login-go"].addEventListener("click", async () => {

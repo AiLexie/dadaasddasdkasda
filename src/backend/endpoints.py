@@ -77,6 +77,18 @@ def requires_authorization(function: Callable[..., None]):
 	return on_request
 
 @requires_authorization
+def on_get_me_request(job: HTTPJob, authed_user: User):
+	content = dump_json(authed_user, indent=None)
+	job.write_head(200, {
+		"Content-Type": "application/json; charset=utf-8",
+		"Content-Length": str(len(content))
+	})
+	job.close_body(content)
+
+def on_post_me_request(job: HTTPJob):
+	job.close_head(501)
+
+@requires_authorization
 def on_get_messages_request(job: HTTPJob, authed_user: User, community: str,
 		channel: str):
 	if community != "_" or channel != "_":
@@ -192,6 +204,10 @@ endpoints = {
 	generate_endpoint("/api/v1/communities//channels//messages", {
 		"GET": on_get_messages_request,
 		"POST": on_post_messages_request
+	}),
+	generate_endpoint("/api/v1/me", {
+		"GET": on_get_me_request,
+		"POST": on_post_me_request
 	})
 } | {
 	endpoint 
