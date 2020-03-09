@@ -16,7 +16,7 @@ token_regex = regex_compile(r"^(\w+):(.*)$")
 
 mut_message_event = Event()
 
-def respond_error(job: HTTPJob, message: str, code: str = "400 Bad Request"):
+def respond_error(job: HTTPJob, message: str, code: Union[str, int] = 400):
 	content = f'{{"message":"{message}"}}'.encode("utf-8")
 	headers = {
 		"Content-Type": "application/json; charset=utf-8",
@@ -39,7 +39,7 @@ def get_authorized_user(job: HTTPJob):
 
 	auth: Optional[str] = job.headers.get("AUTHORIZATION")
 	if auth is None:
-		return respond_error(job, "Unauthorized.", "401 Unauthorized")
+		return respond_error(job, "Unauthorized.", 401)
 
 	auth_match = auth_regex.match(auth)
 	if auth_match is None:
@@ -80,7 +80,7 @@ def requires_authorization(function: Callable[..., None]):
 def on_get_messages_request(job: HTTPJob, authed_user: User, community: str,
 		channel: str):
 	if community != "_" or channel != "_":
-		job.write_head("404 Not Found", {})
+		job.write_head(404, {})
 		job.close_body()
 		return
 
@@ -129,7 +129,7 @@ def on_get_messages_request(job: HTTPJob, authed_user: User, community: str,
 		]
 
 		content = dump_json({"users": users, "messages": messages}, indent=None)
-		job.write_head("200 OK", {
+		job.write_head(200, {
 			"Content-Type": "application/json; charset=utf-8",
 			"Content-Length": str(len(content))
 		})
@@ -142,7 +142,7 @@ def on_get_messages_request(job: HTTPJob, authed_user: User, community: str,
 		]
 
 		content = dump_json({"users": users, "messages": messages}, indent=None)
-		job.write_head("200 OK", {
+		job.write_head(200, {
 			"Content-Type": "application/json; charset=utf-8",
 			"Content-Length": str(len(content))
 		})
@@ -154,7 +154,7 @@ def on_post_messages_request(job: HTTPJob, authed_user: User, community: str,
 	global mut_message_event
 
 	if community != "_" or channel != "_":
-		job.write_head("404 Not Found", {})
+		job.write_head(404, {})
 		job.close_body()
 		return
 
@@ -182,7 +182,7 @@ def on_post_messages_request(job: HTTPJob, authed_user: User, community: str,
 	mut_message_event.set()
 	mut_message_event = Event()
 	message_json = dump_json(message, indent=None)
-	job.write_head("200 OK", {
+	job.write_head(200, {
 		"Content-Type": "application/json; charset=utf-8",
 		"Content-Length": str(len(message_json))
 	})
@@ -210,5 +210,5 @@ def handler(job: HTTPJob):
 	if endpoint is not None:
 		endpoint(job)
 	else:
-		job.write_head("404 Not Found", {})
+		job.write_head(404, {})
 		job.close_body()

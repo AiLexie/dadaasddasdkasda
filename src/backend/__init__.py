@@ -4,8 +4,8 @@ from gevent.queue import Queue
 from gevent.pywsgi import WSGIServer, WSGIHandler, Input
 from typing import Any, Callable, Dict, List, Tuple, Union, Optional
 from urllib.parse import parse_qsl, unquote, urlparse
-from time import sleep
-from os import getenv
+from json import loads
+from os import getenv, path as ospath
 
 Environ = Dict[str, Any]
 StartResponse = Callable[[str, List[Tuple[str, str]]], Any]
@@ -22,6 +22,12 @@ class HTTPJob:
 	means that you don't have to send a response immediately, infact you don't
 	even have to send a response at all.
 	"""
+
+	status_codes = {
+		int(code): f"{code} {message}" \
+			for code, message in loads(open(ospath.join(ospath.dirname(__file__),
+				"../statuscodes.json"), "r").read()).items()
+	}
 
 	def __init__(self, request: Environ, respond: StartResponse, body: Queue):
 		self._wr_head_fn = respond
@@ -50,11 +56,11 @@ class HTTPJob:
 		`headers`.
 		"""
 
-		if type(status) != str:
-			raise Exception("no")
-		status_data: str = status # type: ignore
-
+		status_data: Optional[str] = status if type(status) is str \
+			else HTTPJob.status_codes.get(status)
 		header_arr = [(key, val) for key, val in headers.items()]
+		if status_data is None:
+			raise ValueError("Invalid status code.")
 
 		self._wr_head_fn(status_data, header_arr)
 
@@ -93,7 +99,7 @@ class HTTPJob:
 		with code 204, and no body nor headers.
 		"""
 
-		self.write_head("204 No Content", {})
+		self.write_head(204, {})
 		self.close_body()
 
 from .endpoints import handler

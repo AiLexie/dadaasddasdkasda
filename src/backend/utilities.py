@@ -116,7 +116,7 @@ def generate_endpoint(expression: Union[str, List[Optional[str]]],
 		methods.get("GET")(new_job)
 
 	def preform_options(job: HTTPJob, *args, **kwargs):
-		job.close_head("204 No Content", headers_options)
+		job.close_head(204, headers_options)
 
 	compiled_methods = dict({
 		"HEAD": perform_head,
@@ -146,7 +146,7 @@ def static_routes(paths: List[str], content: Optional[Union[bytes, str]] = None,
 	def route(job: HTTPJob):
 		content_length = the_content if isinstance(the_content, str) \
 			else the_content.decode("utf-8")
-		job.write_head("200 OK", {
+		job.write_head(200, {
 				"Content-Type": the_mime[0],
 				"Content-Length": str(len(content_length))
 			})
