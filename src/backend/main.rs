@@ -1,17 +1,15 @@
-use pyo3::prelude::{Python, PyObject, PyResult, PyErr};
+use pyo3::prelude::{Python, PyObject, PyResult};
 use std::fs::canonicalize;
 use std::error::Error;
 use std::boxed;
 use std::fmt;
 
 #[derive(Debug)]
-struct PyError {
-  pyo3_error: PyErr
-}
+struct PyError;
 
 impl fmt::Display for PyError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Python Exception: {:?}", self.pyo3_error)
+    write!(f, "Python Exception.")
   }
 }
 
@@ -21,12 +19,12 @@ impl Error for PyError {
   }
 }
 
-fn pete<T>(py_res: PyResult<T>) -> Result<T, Box<PyError>> {
+fn pete<T>(py_res: PyResult<T>, py: Python) -> Result<T, Box<PyError>> {
   match py_res {
     Ok(val) => Ok(val),
     Err(err) => {
-      //Print actual stack trace here please!
-      Err(boxed::Box::new(PyError {pyo3_error: err}))
+      err.print(py);
+      Err(boxed::Box::new(PyError))
     }
   }
 }
@@ -41,17 +39,17 @@ fn main() -> Result<(), Box<dyn Error>> {
 
   //Add working directory to list of module search paths.
   let sys_mod =
-    pete(py.import("sys"))?;
+    pete(py.import("sys"), py)?;
   let py_search_paths: PyObject =
-    pete(sys_mod.get("path"))?.into();
+    pete(sys_mod.get("path"), py)?.into();
   let py_search_paths_append: PyObject =
-    pete(py_search_paths.getattr(py, "append"))?.into();
-  pete(py_search_paths_append.call1(py, (mod_location,)))?;
+    pete(py_search_paths.getattr(py, "append"), py)?.into();
+  pete(py_search_paths_append.call1(py, (mod_location,)), py)?;
 
   //Import it.
-  let impl_mod = pete(py.import("server_impl"))?;
+  let impl_mod = pete(py.import("server_impl"), py)?;
   //Run it.
-  pete(PyObject::from(pete(impl_mod.get("main"))?).call0(py))?;
+  pete(PyObject::from(pete(impl_mod.get("main"), py)?).call0(py), py)?;
 
   Ok(())
 }
