@@ -1,5 +1,8 @@
 # Ignore generated files.
 __pycache__/
+/target/
+/node_modules/
+/out/
 
 # Ignore development files.
-debugrun.sh
+/debugrun.sh

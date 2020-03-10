@@ -1,1 +1,2 @@
-web: python src/server.py
+release: make
+web: chmod +x out/server_start; ./out/server_start
