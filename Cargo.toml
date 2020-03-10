@@ -7,10 +7,10 @@ edition = "2018"
 [dependencies]
 pyo3 = "0.9.0-alpha.1"
 
-[lib]
-name = "hyper_py"
-path = "src/backend/lib.rs"
-crate-type = ["dylib"]
+# [lib]
+# name = "hyper_py"
+# path = "src/backend/lib.rs"
+# crate-type = ["dylib"]
 
 [[bin]]
 name = "server_start"

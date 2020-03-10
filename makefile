@@ -2,7 +2,7 @@ out/: $(wildcard src/backend/*) out/assets/ out/server_impl/
 	mkdir -p out/
 	cargo build $(if $(filter true,$(PRODUCTION)),--release)
 	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/server_start out/
-	cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/libhyper_py.so out/hyper_py.so
+	# cp target/$(if $(filter true,$(PRODUCTION)),release,debug)/libhyper_py.so out/hyper_py.so
 	cp src/frontendmap.json src/statuscodes.json out/
 
 out/server_impl/: $(wildcard src/backend/*.py)
