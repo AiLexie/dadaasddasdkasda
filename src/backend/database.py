@@ -20,7 +20,7 @@ class User:
 	name property.
 	"""
 
-	def __init__(self, name: str, password: str, about: str = None):
+	def __init__(self, name: str, password: str, about: Optional[str] = None):
 		self.name = name
 		self.password = password
 		self.about = about
@@ -46,6 +46,13 @@ class Message:
 			"author": self.author,
 			"content": self.content
 		}
+
+class Invite:
+	def __init__(self, code: str, inviter: Optional[Union[User, str]],
+			accepter: Optional[Union[User, str]]):
+		self.code = code
+		self.inviter = inviter.name if isinstance(inviter, User) else inviter
+		self.accepter = accepter.name if isinstance(accepter, User) else accepter
 
 def _create_simple_db_cache_getter(cache: ptr[Dict[Any, datetime]],
 		collection: Collection, id_name: str, id_type: Type[T], Class: Type[C]):
@@ -126,9 +133,23 @@ def _create_simple_db_cache_getter_setter(cache: ptr[Dict[Any, datetime]],
 		_create_simple_db_cache_setter(cache, collection, id_name, Class)
 	)
 
-# Getters and setters for data with one ID.
+def _db_cache_mngmnt_func(cache: ptr[Dict[object, datetime]], seconds: int):
+	delta = timedelta(0, seconds)
+	while True:
+		now = datetime.now()
+		global _db_cache
+		cache.value = {
+			obj: time for obj, time in cache.value.items() \
+				if now < time + delta
+		}
+		sleep(30)
+
+# Getters and setters for data with one ID...
+
 get_user_by_name, set_user = _create_simple_db_cache_getter_setter(_db_cache, _client.users, "name", str, User)
 get_message_by_timestamp, set_message = _create_simple_db_cache_getter_setter(_db_cache, _client.messages, "timestamp", float, Message)
+
+# Advanced getters and setters...
 
 # TODO: Use cache here!
 def get_messages_by_timestamp(timestamp: float, before: bool, limit: int):
@@ -146,16 +167,19 @@ def get_messages_by_timestamp(timestamp: float, before: bool, limit: int):
 			for raw_message in raw_messages
 	]
 
-def _db_cache_mngmnt_func(cache: ptr[Dict[object, datetime]], seconds: int):
-	delta = timedelta(0, seconds)
-	while True:
-		now = datetime.now()
-		global _db_cache
-		cache.value = {
-			obj: time for obj, time in cache.value.items() \
-				if now < time + delta
-		}
-		sleep(30)
+# TODO: Use cache here!
+def get_invite_by_code(code: str):
+	raw_obj = _client.invites.find_one({"code": code, "accepter": None})
+	if raw_obj is None:
+		return None
+
+	return Invite(raw_obj.get("code"), raw_obj.get("inviter"),
+		raw_obj.get("accepter"))
+
+# TODO: Use cache here!
+def set_invite_by_code(code: str, new_invite: Invite):
+	_client.invites.replace_one({"code": code, "accepter": None},
+		vars(new_invite))
 
 _db_cache_mngmnt = Thread(target = _db_cache_mngmnt_func,
 	args = [_db_cache, 500], daemon = True)

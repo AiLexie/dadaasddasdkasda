@@ -3,8 +3,9 @@ from gevent.event import Event
 from . import HTTPJob
 from .utilities import JSONDecodeError, load_json, dump_json, static_routes, \
 	generate_endpoint
-from .database import Message, User, get_messages_by_timestamp, \
-	get_user_by_name, set_message
+from .database import Invite, Message, User, get_invite_by_code, \
+	get_messages_by_timestamp, get_user_by_name, set_invite_by_code, \
+	set_message, set_user
 from typing import Any, Dict, Callable, Union, List, Optional
 from datetime import datetime as DateTime
 from base64 import b64decode
@@ -13,6 +14,7 @@ from os import path
 
 auth_regex = regex_compile(r"^(?:(\w+) )?(.*)$")
 token_regex = regex_compile(r"^(\w+):(.*)$")
+username_regex = regex_compile(r"[a-z_]{2,32}")
 
 mut_message_event = Event()
 
@@ -26,7 +28,7 @@ def respond_error(job: HTTPJob, message: str, code: Union[str, int] = 400):
 	job.write_head(code, headers)
 	job.close_body(content)
 
-def get_authorized_user(job: HTTPJob):
+def get_authorized_user(auth_or_rq: Union[HTTPJob, Optional[str]]):
 	"""Gets the authorized user via the request's authorization header. If for any
 	reason the authorization fails, this method automatically sends a response and
 	returns nothing, allowing for a very easy implementation as shown below.
@@ -35,31 +37,42 @@ def get_authorized_user(job: HTTPJob):
 	if (auth_user := get_authorized_user(job)) is None:
 		return
 	```
+
+	If you provide the authorization header instead, this function will simply
+	return None when the header is invalid.
 	"""
 
-	auth: Optional[str] = job.headers.get("AUTHORIZATION")
+	job = auth_or_rq if isinstance(auth_or_rq, HTTPJob) else None
+	def respond(message: str, status: int = 400):
+		if job is not None:
+			return respond_error(job, message, status)
+		else:
+			return None
+
+	auth: Optional[str] = job.headers.get("AUTHORIZATION") \
+		if isinstance(auth_or_rq, HTTPJob) else auth_or_rq
 	if auth is None:
-		return respond_error(job, "Unauthorized.", 401)
+		return respond("Unauthorized.", 401)
 
 	auth_match = auth_regex.match(auth)
 	if auth_match is None:
-		return respond_error(job, "Invalid authorization header.")
+		return respond("Invalid authorization header.")
 
 	auth_type = auth_match[1]
 	encoded_token = auth_match[2]
 	if auth_type != "" and auth_type.lower() != "basic":
-		return respond_error(job, "Unknown authorization type.")
+		return respond("Unknown authorization type.")
 
 	token = b64decode(encoded_token).decode("utf-8")
 	token_match = token_regex.match(token)
 	if token_match is None:
-		return respond_error(job, "Invalid authorization token.")
+		return respond("Invalid authorization token.")
 
 	user_name = token_match[1]
 	password = token_match[2]
 	user = get_user_by_name(user_name)
 	if user is None or user.password != password:
-		return respond_error(job, "Bad authorization token.")
+		return respond("Bad authorization token.")
 
 	return user
 
@@ -86,7 +99,50 @@ def on_get_me_request(job: HTTPJob, authed_user: User):
 	job.close_body(content)
 
 def on_post_me_request(job: HTTPJob):
-	job.close_head(501)
+	body = job.body.read()
+	json_body: Dict[str, Any]
+	try:
+		json_body = load_json(body)
+	except JSONDecodeError:
+		return respond_error(job, "Invalid body.")
+	else:
+		if type(json_body) is not dict:
+			return respond_error(job, "Bad json structure.")
+
+	authed_user = get_authorized_user(job.headers.get("AUTHORIZATION"))
+	if authed_user is None:
+		name: str = json_body.get("name") # type: ignore
+		invite: str = json_body.get("invite") # type: ignore
+		password: str = json_body.get("password") # type: ignore
+		if type(password) is not str or type(name) is not str or \
+				type(invite) is not str:
+			return respond_error(job, "Bad json structure.")
+
+		if username_regex.match(name) is None:
+			return respond_error(job, "Username must be between 2 and 32 " +
+				"characters inclusive, and must be latin characters or underscores " +
+				"only.")
+
+		if get_user_by_name(name) is not None:
+			return respond_error(job, "That username is already taken.")
+
+		invite_object = get_invite_by_code(invite)
+		if invite_object is None:
+			return respond_error(job, "Invalid invite.")
+
+		new_user = User(name, password)
+		new_invite_object = Invite(invite, invite_object.inviter, new_user)
+
+		set_user(new_user)
+		set_invite_by_code(invite, new_invite_object)
+
+		body = dump_json(new_user, indent=None)
+
+		job.write_head(200, {
+			"Content-Type": "application/json; charset=utf-8",
+			"Content-Length": str(len(body))
+		})
+		job.close_body(body)
 
 @requires_authorization
 def on_get_messages_request(job: HTTPJob, authed_user: User, community: str,
