@@ -112,7 +112,7 @@ def direct_request_handler(request: Environ, respond: StartResponse):
 
 def main():
 	port_env = getenv("PORT")
-	port = port_env if port_env is not None else 8080
+	port = int(port_env) if port_env is not None else 8080
 
 	server = WSGIServer(('127.0.0.1', port), direct_request_handler,
 		handler_class=RequestLinePathHandler)
