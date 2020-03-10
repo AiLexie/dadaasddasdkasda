@@ -1,4 +1,4 @@
-# from gevent import monkey; monkey.patch_all()
+from gevent import monkey; monkey.patch_all()
 from gevent import spawn
 from gevent.queue import Queue
 from gevent.pywsgi import WSGIServer, WSGIHandler, Input
