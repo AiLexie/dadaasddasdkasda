@@ -1,1 +1,1 @@
-web: sleep 89234180324190432190324190342
+web: python < <(printf 'import out.server_impl as server_impl\nserver_impl.main()')
