@@ -1,1 +1,1 @@
-web: chmod +x out/server_start; ./out/server_start
+web: sleep 89234180324190432190324190342
